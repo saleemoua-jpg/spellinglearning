@@ -509,38 +509,16 @@ function spellCorrectWord(){
  try{
    speechSynthesis.cancel();
 
-   const LETTER_NAMES={
-     A:"ay",B:"bee",C:"see",D:"dee",E:"ee",F:"eff",G:"gee",
-     H:"aitch",I:"eye",J:"jay",K:"kay",L:"ell",M:"em",N:"en",
-     O:"oh",P:"pee",Q:"cue",R:"ar",S:"ess",T:"tee",U:"you",
-     V:"vee",W:"double you",X:"ex",Y:"why",Z:"zee"
-   };
-
-   const letters=current.word.toUpperCase().split("")
-     .map(ch=>LETTER_NAMES[ch]||ch);
-
-   const voice=getFriendlyVoice();
-
-   // Android/Chrome sometimes clips the very end of a SpeechSynthesis utterance.
-   // Keep the final letter in its own short utterance so it can never be swallowed.
-   if(letters.length===1){
-     const one=new SpeechSynthesisUtterance(letters[0]);
-     if(voice)one.voice=voice;
-     one.rate=1.08;one.pitch=1.04;one.volume=1;
-     speechSynthesis.speak(one);
-     return;
-   }
-
-   const firstPart=new SpeechSynthesisUtterance(letters.slice(0,-1).join(", "));
-   if(voice)firstPart.voice=voice;
-   firstPart.rate=1.12;firstPart.pitch=1.04;firstPart.volume=1;
-
-   const lastPart=new SpeechSynthesisUtterance(letters[letters.length-1]);
-   if(voice)lastPart.voice=voice;
-   lastPart.rate=1.08;lastPart.pitch=1.04;lastPart.volume=1;
-
-   firstPart.onend=()=>setTimeout(()=>speechSynthesis.speak(lastPart),35);
-   speechSynthesis.speak(firstPart);
+   // Speak the whole spelling as ONE utterance so the browser does not
+   // insert a long pause while creating a new voice utterance per letter.
+   // Example: FAT -> "F, A, T" with quick, natural letter spacing.
+   const spelling=current.word.toUpperCase().split("").join(", ");
+   const u=new SpeechSynthesisUtterance(spelling);
+   u.voice=getFriendlyVoice();
+   u.rate=1.18;
+   u.pitch=1.04;
+   u.volume=1;
+   speechSynthesis.speak(u);
  }catch(e){}
 }
 $("spellCorrectBtn").addEventListener("click",spellCorrectWord);
