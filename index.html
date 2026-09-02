@@ -557,7 +557,7 @@ function spellCorrectWord(){
    if(voice)u.voice=voice;
    // A slightly slower, warmer delivery sounds much less synthetic than
    // rushing isolated letters.
-   u.rate=.88;
+   u.rate=1.35;
    u.pitch=1.0;
    u.volume=1;
    spellSpeechKeepAlive.push(u);
@@ -567,7 +567,7 @@ function spellCorrectWord(){
      if(advanced)return;
      advanced=true;
      i++;
-     setTimeout(speakNext,115);
+     setTimeout(speakNext,10);
    };
    u.onend=advance;
    u.onerror=advance;
