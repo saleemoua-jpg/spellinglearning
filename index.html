@@ -504,22 +504,77 @@ function renderStudentName(){
  });
 }
 
-function spellCorrectWord(){
- if(!current || !current.word)return;
- try{
-   speechSynthesis.cancel();
+let spellSpeechRun=0;
+let spellSpeechKeepAlive=[];
 
-   // Speak the whole spelling as ONE utterance so the browser does not
-   // insert a long pause while creating a new voice utterance per letter.
-   // Example: FAT -> "F, A, T" with quick, natural letter spacing.
-   const spelling=current.word.toUpperCase().split("").join(", ");
-   const u=new SpeechSynthesisUtterance(spelling);
-   u.voice=getFriendlyVoice();
-   u.rate=1.18;
-   u.pitch=1.04;
+function spellCorrectWord(){
+ if(!current || !current.word || !("speechSynthesis" in window))return;
+
+ const LETTER_NAMES={
+   A:"A",B:"B",C:"C",D:"D",E:"E",F:"F",G:"G",
+   H:"H",I:"I",J:"J",K:"K",L:"L",M:"M",N:"N",
+   O:"O",P:"P",Q:"Q",R:"R",S:"S",T:"T",U:"U",
+   V:"V",W:"W",X:"X",Y:"Y",Z:"Z"
+ };
+
+ const letters=current.word.toUpperCase().split("")
+   .filter(ch=>/[A-Z]/.test(ch))
+   .map(ch=>LETTER_NAMES[ch]||ch);
+
+ if(!letters.length)return;
+
+ speechSynthesis.cancel();
+ const run=++spellSpeechRun;
+ spellSpeechKeepAlive=[];
+
+ // Chrome/Edge: favor their smoother installed natural voices.
+ const voices=speechSynthesis.getVoices?.()||[];
+ const naturalPatterns=[
+   /Microsoft Aria Online.*Natural/i,
+   /Microsoft Jenny Online.*Natural/i,
+   /Microsoft Ava Online.*Natural/i,
+   /Microsoft Emma Online.*Natural/i,
+   /Microsoft Andrew Online.*Natural/i,
+   /Google US English/i,
+   /Microsoft Aria.*Natural/i,
+   /Microsoft Jenny.*Natural/i
+ ];
+ let voice=null;
+ for(const rx of naturalPatterns){
+   voice=voices.find(v=>rx.test(v.name));
+   if(voice)break;
+ }
+ if(!voice) voice=getFriendlyVoice();
+
+ let i=0;
+ const speakNext=()=>{
+   if(run!==spellSpeechRun || i>=letters.length){
+     spellSpeechKeepAlive=[];
+     return;
+   }
+
+   const u=new SpeechSynthesisUtterance(letters[i]);
+   if(voice)u.voice=voice;
+   // A slightly slower, warmer delivery sounds much less synthetic than
+   // rushing isolated letters.
+   u.rate=.88;
+   u.pitch=1.0;
    u.volume=1;
+   spellSpeechKeepAlive.push(u);
+
+   let advanced=false;
+   const advance=()=>{
+     if(advanced)return;
+     advanced=true;
+     i++;
+     setTimeout(speakNext,115);
+   };
+   u.onend=advance;
+   u.onerror=advance;
+   setTimeout(advance,1800);
    speechSynthesis.speak(u);
- }catch(e){}
+ };
+ speakNext();
 }
 $("spellCorrectBtn").addEventListener("click",spellCorrectWord);
 function hearWordOnly(){
